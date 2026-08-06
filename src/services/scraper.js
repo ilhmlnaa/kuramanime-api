@@ -224,8 +224,30 @@ export async function scrapeAnimeDetail(param) {
   // Status
   const status = $('.anime__details__widget ul li:contains("Status")').text().split(':')[1]?.trim() || '';
 
+  // Batch info — dari #episodeBatchLists popover (kalau anime punya batch)
+  // data-content berisi: <a ... href='.../batch/1-12' ...> Ep 1-12 </a>
+  const batch = { available: false, ranges: [] };
+  const batchLists = $('#episodeBatchLists');
+  if (batchLists.length) {
+    const batchContent = batchLists.attr('data-content') || '';
+    const batchMatches = [...batchContent.matchAll(/href='([^']*\/batch\/(\d+-\d+))'[^>]*>\s*([^<]+)/g)];
+    for (const m of batchMatches) {
+      batch.ranges.push({
+        range: m[2],
+        label: m[3].trim(),
+        url: m[1],
+      });
+    }
+    batch.available = batch.ranges.length > 0;
+  }
+
+  // Slug bersih (tanpa ID) — dari URL halaman detail
+  const slugMatch = url.match(/\/anime\/(?:\d+\/)?([^/?#]+)$/);
+  const detailSlug = slugMatch ? slugMatch[1] : '';
+
   return {
     id: extractId(url) || $('input#animeId').val() || null,
+    slug: detailSlug,
     title,
     japaneseTitle,
     rating,
@@ -235,6 +257,7 @@ export async function scrapeAnimeDetail(param) {
     genres,
     info,
     episodes,
+    batch,
     url,
   };
 }
