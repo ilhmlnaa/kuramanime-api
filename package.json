@@ -1,0 +1,26 @@
+{
+  "name": "kuramanime-api",
+  "version": "1.0.0",
+  "description": "Unofficial Kuramanime anime scraping API (Express.js)",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "keywords": [
+    "anime",
+    "scraper",
+    "api",
+    "kuramanime",
+    "express"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "playwright": "^1.62.1"
+  }
+}
