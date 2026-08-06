@@ -59,15 +59,6 @@ export async function getText(url, headers = {}) {
 }
 
 /**
- * GET request → buffer (untuk file/asset)
- */
-export async function getBuffer(url, headers = {}) {
-  const res = await fetchWithProxy(url, buildFetchOptions('GET', headers));
-  if (!res.ok) throw new Error(`GET ${url} → HTTP ${res.status}`);
-  return Buffer.from(await res.arrayBuffer());
-}
-
-/**
  * POST request → text (form-urlencoded body)
  */
 export async function postForm(url, formBody, headers = {}) {

@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio';
-import { getText, postForm, BASE_URL } from './httpClient.js';
+import { getText, BASE_URL } from './httpClient.js';
 
 /**
  * Kuramanime Scraper Service
@@ -245,13 +245,7 @@ export async function scrapeAnimeDetail(param) {
  */
 export async function scrapeEpisode(animeIdOrSlug, episodeNum) {
   // Build URL
-  const isId = /^\d+$/.test(animeIdOrSlug);
-  let url;
-  if (isId) {
-    url = `${BASE_URL}/anime/${animeIdOrSlug}`;
-  } else {
-    url = `${BASE_URL}/anime/${animeIdOrSlug}`;
-  }
+  const url = `${BASE_URL}/anime/${animeIdOrSlug}`;
 
   // Get anime page first to find full URL
   let animeHtml, episodeUrl, animeId;
@@ -270,9 +264,8 @@ export async function scrapeEpisode(animeIdOrSlug, episodeNum) {
     }
   } catch {
     // If detail page fails, try constructing URL
-    animeId = isId ? animeIdOrSlug : extractId(animeIdOrSlug);
-    const slug = isId ? '' : extractSlug(animeIdOrSlug);
-    episodeUrl = `${BASE_URL}/anime/${animeId}/${slug}/episode/${episodeNum}`;
+    const slug = extractSlug(animeIdOrSlug);
+    episodeUrl = `${BASE_URL}/anime/${animeIdOrSlug}/${slug}/episode/${episodeNum}`;
   }
 
   // Fetch episode page

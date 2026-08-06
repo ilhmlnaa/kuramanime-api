@@ -114,8 +114,6 @@ export async function getStreamSource(animeId, episodeNum, server) {
 
       // Page number dari check-episode
       try {
-        const m = episodeUrl.match(/\/anime\/\d+\/([^/]+)\/episode\/\d+/);
-        const idPath = m ? m[1] : '';
         const id = (document.querySelector('#animeId')?.value) || episodeUrl.match(/\/anime\/(\d+)/)?.[1] || '';
         const ep = episodeUrl.match(/\/episode\/(\d+)/)?.[1] || '';
         const checkResp = await fetch(`${BASE_URL}/anime/${id}/episode/${ep}/check-episode`, {
@@ -144,7 +142,6 @@ export async function getStreamSource(animeId, episodeNum, server) {
       out.videoUrl = source || '';
       out.iframeUrl = iframe ? iframe.src : '';
       out.hasError = streamHtml.includes('Terjadi kesalahan') || (player && !source);
-      out.playerHtml = player ? player.outerHTML.slice(0, 200) : '';
       return out;
     },
     { BASE_URL, server }
