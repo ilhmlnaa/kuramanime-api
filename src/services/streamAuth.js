@@ -190,7 +190,19 @@ let lastBatch = null;   // { url, loadedAt } halaman batch yang sedang di-load
  */
 export async function getBatchDownload(animeIdOrSlug, range) {
   await getBrowser();
-  const url = `${BASE_URL}/anime/${animeIdOrSlug}/batch/${range}`;
+
+  // Batch URL WAJIB pakai ID numerik — slug-only redirect ke /xxx/ yang rusak.
+  // Kalau yang dikirim slug, resolve dulu lewat halaman detail (input#animeId).
+  let animeId = animeIdOrSlug;
+  if (!/^\d+$/.test(String(animeIdOrSlug))) {
+    await page.goto(`${BASE_URL}/anime/${animeIdOrSlug}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    animeId = await page.evaluate(() => document.querySelector('input#animeId')?.value || '');
+    if (!animeId) {
+      throw new Error(`Tidak dapat resolve anime ID dari slug: ${animeIdOrSlug}`);
+    }
+  }
+
+  const url = `${BASE_URL}/anime/${animeId}/batch/${range}`;
 
   // Navigasi ulang jika beda URL atau cache > 5 menit
   const now = Date.now();

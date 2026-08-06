@@ -96,6 +96,27 @@ Response:
 
 > **First request lambat** (~5-8 detik) karena launch browser + load leviathan.js. Request berikutnya untuk episode yang sama dalam 5 menit akan cepat (<1 detik, cache).
 
+### Batch Download 📦
+```bash
+GET /api/anime/:id/batch/:range          → /api/anime/3791/batch/1-12
+GET /api/anime/:id/:slug/batch/:range    → /api/anime/3791/watashi-ga-koibito.../batch/1-12
+→ { success, data: { title, range, downloads: [...] } }
+```
+`downloads` berisi daftar kualitas dengan size + link per server:
+```json
+{
+  "quality": "MKV 480p (Softsub)",
+  "type": "mkv",
+  "subType": "softsub",
+  "size": "1.39 GB",
+  "links": [
+    { "server": "kDrive", "url": "https://v1.kuramadrive.com/..." },
+    { "server": "MediaFire", "url": "https://www.mediafire.com/..." }
+  ]
+}
+```
+Sama seperti `/stream`, ini butuh Playwright (link dimuat dinamis via `jLoadSecure`). Slug-only pun aman — ID di-resolve otomatis.
+
 ### Quick Lists
 ```
 GET /api/quick/ongoing
