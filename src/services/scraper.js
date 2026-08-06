@@ -23,14 +23,15 @@ export async function scrapeHome() {
     recent.push({ title, episode, quality, img, url: $link, slug: extractSlug($link) });
   });
 
-  // Juga scrape banner/carousel items
+  // Carousel/banner — struktur: .hero__slider.owl-carousel > .hero__items
+  // (data-setbg untuk gambar, h2 untuk judul, a[href*="/anime/"] untuk link anime)
   const carousel = [];
-  $('.owl-carousel .carousel__item').each((_, el) => {
+  $('.hero__slider .hero__items, .hero__slider .owl-item .hero__items').each((_, el) => {
     const $el = $(el);
-    const link = $el.find('a').attr('href') || '';
-    const img = $el.find('img').attr('src') || $el.find('img').attr('data-src') || '';
-    const title = $el.find('h5, h4').text().trim();
-    if (link) carousel.push({ title, img, url: link });
+    const link = $el.find('a[href*="/anime/"]').attr('href') || '';
+    const img = $el.attr('data-setbg') || $el.find('.set-bg, [data-setbg]').attr('data-setbg') || '';
+    const title = $el.find('h2, h1, h3').first().text().trim();
+    if (title) carousel.push({ title, img, url: link, slug: extractSlug(link) });
   });
 
   return { recent, carousel };
@@ -150,7 +151,8 @@ export async function scrapeAnimeDetail(param) {
 
   if (slug) {
     // Kita punya slug — langsung ke halaman detail
-    url = `${BASE_URL}/anime/${animeId || ''}/${slug}`.replace(/\/\//, '/');
+    // gunakan ternary supaya tidak menghasilkan // ganda jika animeId null
+    url = `${BASE_URL}/anime/${animeId ? animeId + '/' : ''}${slug}`;
   } else if (animeId) {
     // Hanya ID — cari via anime list untuk dapat slug
     url = `${BASE_URL}/anime?order_by=text&page=1`;
