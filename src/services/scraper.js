@@ -197,7 +197,8 @@ export async function scrapeAnimeDetail(param) {
   });
 
   // Episode list — dari data-content attribute di #episodeLists popover
-  const animeIdStr = extractId(url) || '';
+  // Fallback id dari input#animeId (ada di halaman detail walaupun URL tidak mengandung id)
+  const animeIdStr = extractId(url) || $('input#animeId').val() || '';
   const episodes = [];
   const episodeLists = $('#episodeLists');
   if (episodeLists.length) {
@@ -224,7 +225,7 @@ export async function scrapeAnimeDetail(param) {
   const status = $('.anime__details__widget ul li:contains("Status")').text().split(':')[1]?.trim() || '';
 
   return {
-    id: extractId(url),
+    id: extractId(url) || $('input#animeId').val() || null,
     title,
     japaneseTitle,
     rating,

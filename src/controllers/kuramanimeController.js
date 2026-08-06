@@ -7,7 +7,7 @@ import {
   scrapeQuickList,
   scrapeProperties,
 } from '../services/scraper.js';
-import { getStreamSource } from '../services/streamAuth.js';
+import { getStreamSource, getBatchDownload } from '../services/streamAuth.js';
 
 // ─── Home ─────────────────────────────────────
 export async function homeController(req, res, next) {
@@ -134,6 +134,24 @@ export async function streamController(req, res, next) {
           : undefined,
       },
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── Batch ───────────────────────────────────
+/**
+ * Mendapatkan data unduhan batch (kualitas, size, link per server).
+ * Menggunakan Playwright karena link dimuat dinamis via leviathan/jLoadSecure.
+ *
+ * Route: GET /anime/:id/batch/:range
+ * Contoh: /anime/3791/batch/1-12
+ */
+export async function batchController(req, res, next) {
+  try {
+    const { id, range } = req.params;
+    const data = await getBatchDownload(id, range);
+    res.json({ success: true, data });
   } catch (err) {
     next(err);
   }

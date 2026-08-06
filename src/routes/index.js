@@ -5,6 +5,7 @@ import {
   animeDetailController,
   episodeController,
   streamController,
+  batchController,
   scheduleController,
   searchController,
   quickListController,
@@ -36,6 +37,10 @@ router.get('/search', searchController);
 // Detail Anime
 router.get('/anime/:id', animeDetailController);
 router.get('/anime/:id/:slug', animeDetailController);
+
+// Batch download (harus sebelum route episode agar tidak konflik)
+router.get('/anime/:id/batch/:range', batchController);
+router.get('/anime/:id/:slug/batch/:range', batchController);
 
 // Episode metadata
 router.get('/anime/:id/episode/:ep', episodeController);

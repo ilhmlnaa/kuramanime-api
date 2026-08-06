@@ -141,7 +141,10 @@ export async function getStreamSource(animeId, episodeNum, server) {
 
       out.videoUrl = source || '';
       out.iframeUrl = iframe ? iframe.src : '';
-      out.hasError = streamHtml.includes('Terjadi kesalahan') || (player && !source);
+      // Error HANYA jika tidak ada source video DAN tidak ada iframe embed.
+      // Jangan pakai text-based check ("Terjadi kesalahan") karena teks itu
+      // bisa muncul di bagian lain halaman (footer/komentar) padahal stream valid.
+      out.hasError = !source && !(iframe && iframe.src);
       return out;
     },
     { BASE_URL, server }
@@ -166,4 +169,92 @@ export async function closeStreamBrowser() {
     context = null;
     page = null;
   }
+}
+
+// ─── Batch ──────────────────────────────────────────────
+
+let lastBatch = null;   // { url, loadedAt } halaman batch yang sedang di-load
+
+/**
+ * Ambil data unduhan batch (kualitas + size + link per server).
+ *
+ * Link download batch di-load secara dinamis via leviathan/jLoadSecure,
+ * jadi tidak bisa pure fetch — harus pakai Playwright:
+ * 1. Navigasi ke halaman batch (mis. /anime/3791/slug/batch/1-12)
+ * 2. Tunggu #animeDownloadLink terisi (JS sudah mengeksekusi token)
+ * 3. Parse h6 (kualitas + size) dan link server di bawahnya
+ *
+ * @param {string|number} animeIdOrSlug - ID atau slug anime
+ * @param {string} range - rentang episode batch, mis. "1-12"
+ * @returns {Promise<object>} { title, range, downloads }
+ */
+export async function getBatchDownload(animeIdOrSlug, range) {
+  await getBrowser();
+  const url = `${BASE_URL}/anime/${animeIdOrSlug}/batch/${range}`;
+
+  // Navigasi ulang jika beda URL atau cache > 5 menit
+  const now = Date.now();
+  if (!(lastBatch && lastBatch.url === url && now - lastBatch.loadedAt < NAV_TTL_MS)) {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    // Tunggu download links muncul (diisi via JS/leviathan)
+    await page.waitForFunction(
+      () => {
+        const el = document.querySelector('#animeDownloadLink');
+        return el && el.querySelectorAll('h6').length > 0;
+      },
+      { timeout: 30000 }
+    );
+    lastBatch = { url, loadedAt: now };
+  }
+
+  const result = await page.evaluate(() => {
+    const out = {};
+    out.title =
+      document.querySelector('h1, .anime__details__title h3')?.textContent?.trim() || '';
+    out.range =
+      document.querySelector('.section-title-v2 span.text-danger')?.textContent?.trim() || '';
+
+    const downloads = [];
+    const container = document.querySelector('#animeDownloadLink');
+    if (container) {
+      // Struktur: <h6>Kualitas (Size)</h6> <hr> <a>Server</a> <a>Server</a> ...
+      container.querySelectorAll('h6').forEach((h6) => {
+        const heading = h6.textContent.trim().replace(/\s+/g, ' ');
+        // Parse: "MKV 480p (Softsub) — (1.39 GB)"
+        const qualityMatch = heading.match(/^(.*?)\s*[—-]?\s*\(([\d.,]+\s*(?:GB|MB|KB))\)/i);
+        const quality = qualityMatch ? qualityMatch[1].trim() : heading;
+        const size = qualityMatch ? qualityMatch[2] : null;
+        const type = /mkv/i.test(heading) ? 'mkv' : /mp4/i.test(heading) ? 'mp4' : 'other';
+        const subType = /softsub/i.test(heading) ? 'softsub' : /hardsub/i.test(heading) ? 'hardsub' : null;
+
+        const links = [];
+        let sibling = h6.nextElementSibling;
+        while (sibling && sibling.tagName !== 'H6') {
+          if (sibling.tagName === 'A' && sibling.getAttribute('href')) {
+            links.push({
+              server: sibling.textContent.trim(),
+              url: sibling.getAttribute('href'),
+            });
+          }
+          sibling = sibling.nextElementSibling;
+        }
+        downloads.push({
+          quality,
+          type,
+          subType,
+          size,
+          links,
+        });
+      });
+    }
+    out.downloads = downloads;
+    return out;
+  });
+
+  return {
+    title: result.title,
+    range: result.range || range,
+    downloads: result.downloads || [],
+    url,
+  };
 }
