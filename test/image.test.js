@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { extractCover, enrichWithCovers } from '../src/services/imageResolver.js';
+import {
+  extractCover,
+  enrichWithCovers,
+  resolveCover,
+} from '../src/services/imageResolver.js';
 
 test('extractCover reads data-setbg before og:image', () => {
   const html = `
@@ -51,4 +55,23 @@ test('enrichWithCovers preserves items when cover resolution fails', async () =>
   });
 
   assert.equal(enriched[0].img, '');
+});
+
+test('resolveCover deduplicates concurrent detail requests', async () => {
+  let calls = 0;
+  const item = { id: 'dedupe-test', url: '/anime/dedupe-test' };
+  const fetchText = async () => {
+    calls += 1;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    return '<meta property="og:image" content="https://example.com/dedupe.jpg">';
+  };
+
+  const results = await Promise.all([
+    resolveCover(item, { fetchText }),
+    resolveCover(item, { fetchText }),
+    resolveCover(item, { fetchText }),
+  ]);
+
+  assert.deepEqual(results, Array(3).fill('https://example.com/dedupe.jpg'));
+  assert.equal(calls, 1);
 });

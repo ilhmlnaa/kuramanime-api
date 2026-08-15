@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import { getText, BASE_URL } from './httpClient.js';
 import { enrichWithCovers, extractCover } from './imageResolver.js';
+import { paginateQuickList } from './quickList.js';
 
 export function cleanServerName(name) {
   return name.replace(/\s*\([^)]*\)\s*$/, '').trim();
@@ -466,7 +467,7 @@ export async function scrapeSchedule(day) {
 
 // ─── Quick Lists ────────────────────────────────
 
-export async function scrapeQuickList(type) {
+export async function scrapeQuickList(type, params = {}) {
   const url = `${BASE_URL}/quick/${type}?order_by=text`;
   const html = await getText(url);
   const $ = cheerio.load(html);
@@ -496,7 +497,17 @@ export async function scrapeQuickList(type) {
     });
   });
 
-  return { type, results: await enrichWithCovers(results) };
+  const paginated = paginateQuickList(results, params);
+  const pageResults = paginated.includeImages
+    ? await enrichWithCovers(paginated.results)
+    : paginated.results.map(({ img: _img, ...item }) => item);
+
+  return {
+    type,
+    results: pageResults,
+    pagination: paginated.pagination,
+    includeImages: paginated.includeImages,
+  };
 }
 
 // ─── Helpers ────────────────────────────────────

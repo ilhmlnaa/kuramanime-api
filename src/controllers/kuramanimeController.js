@@ -53,7 +53,8 @@ export async function quickListController(req, res, next) {
     if (!valid.includes(type)) {
       return res.status(400).json({ success: false, error: `Tipe tidak valid. Gunakan: ${valid.join(', ')}` });
     }
-    const data = await scrapeQuickList(type);
+    const { page, limit, includeImages } = req.query;
+    const data = await scrapeQuickList(type, { page, limit, includeImages });
     res.json({ success: true, data });
   } catch (err) {
     next(err);
