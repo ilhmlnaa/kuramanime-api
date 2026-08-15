@@ -1,4 +1,5 @@
 import { chromium } from 'playwright';
+import { parseEpisodeDynamicHtml } from './scraper.js';
 
 /**
  * Kuramanime Stream Service (Playwright-backed)
@@ -158,6 +159,22 @@ export async function getStreamSource(animeId, episodeNum, server) {
     servers: result.servers || [],
     page: result.checkPage || '1',
     csrfToken: result.csrfToken,
+  };
+}
+
+export async function getEpisodeDynamicData(animeId, episodeNum) {
+  const stream = await getStreamSource(animeId, episodeNum, 'kuramadrive');
+
+  await page.waitForFunction(
+    () => document.querySelectorAll('#animeDownloadLink h6').length > 0,
+    { timeout: 30000 }
+  );
+
+  const parsed = parseEpisodeDynamicHtml(await page.content());
+
+  return {
+    downloads: parsed.downloads,
+    streamUrl: stream.videoUrl || stream.iframeUrl || parsed.streamUrl || null,
   };
 }
 

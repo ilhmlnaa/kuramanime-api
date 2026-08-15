@@ -7,9 +7,12 @@ import {
   scrapeQuickList,
   scrapeProperties,
 } from '../services/scraper.js';
-import { getStreamSource, getBatchDownload } from '../services/streamAuth.js';
+import {
+  getStreamSource,
+  getEpisodeDynamicData,
+  getBatchDownload,
+} from '../services/streamAuth.js';
 
-// ─── Home ─────────────────────────────────────
 export async function homeController(req, res, next) {
   try {
     const data = await scrapeHome();
@@ -19,7 +22,6 @@ export async function homeController(req, res, next) {
   }
 }
 
-// ─── Anime List / Search ──────────────────────
 export async function animeListController(req, res, next) {
   try {
     const { search, order_by, page, genre, season, type, quality, source, country, studio } = req.query;
@@ -43,7 +45,6 @@ export async function searchController(req, res, next) {
   }
 }
 
-// ─── Quick Lists: ongoing, finished, upcoming, movie, donghua ──
 export async function quickListController(req, res, next) {
   try {
     const { type } = req.params;
@@ -58,7 +59,6 @@ export async function quickListController(req, res, next) {
   }
 }
 
-// ─── Properties ──────────────────────────────
 export async function propertiesController(req, res, next) {
   try {
     const { type } = req.params;
@@ -73,7 +73,6 @@ export async function propertiesController(req, res, next) {
   }
 }
 
-// ─── Anime Detail ────────────────────────────
 export async function animeDetailController(req, res, next) {
   try {
     const { id, slug } = req.params;
@@ -85,26 +84,26 @@ export async function animeDetailController(req, res, next) {
   }
 }
 
-// ─── Episode (metadata + download + server list) ──
 export async function episodeController(req, res, next) {
   try {
     const { id, ep } = req.params;
-    const data = await scrapeEpisode(id, parseInt(ep));
-    res.json({ success: true, data });
+    const episode = parseInt(ep);
+    const data = await scrapeEpisode(id, episode);
+    const dynamicData = await getEpisodeDynamicData(data.animeId || id, episode);
+
+    res.json({
+      success: true,
+      data: {
+        ...data,
+        downloads: dynamicData.downloads,
+        streamUrl: dynamicData.streamUrl,
+      },
+    });
   } catch (err) {
     next(err);
   }
 }
 
-// ─── Stream URL ──────────────────────────────
-/**
- * Mendapatkan URL streaming dari server tertentu.
- * Menggunakan Playwright (headless chromium) untuk mengeksekusi
- * leviathan.js → otomatis dapat authorization token + CSRF + page token.
- *
- * Query params:
- *   server (wajib) — kuramadrive | mega | streamruby | dsb (lihat response .servers)
- */
 export async function streamController(req, res, next) {
   try {
     const { id, ep } = req.params;
@@ -139,14 +138,6 @@ export async function streamController(req, res, next) {
   }
 }
 
-// ─── Batch ───────────────────────────────────
-/**
- * Mendapatkan data unduhan batch (kualitas, size, link per server).
- * Menggunakan Playwright karena link dimuat dinamis via leviathan/jLoadSecure.
- *
- * Route: GET /anime/:id/batch/:range
- * Contoh: /anime/3791/batch/1-12
- */
 export async function batchController(req, res, next) {
   try {
     const { id, range } = req.params;
@@ -157,7 +148,6 @@ export async function batchController(req, res, next) {
   }
 }
 
-// ─── Schedule ────────────────────────────────
 export async function scheduleController(req, res, next) {
   try {
     const { day } = req.params;

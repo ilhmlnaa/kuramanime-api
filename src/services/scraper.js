@@ -1,6 +1,51 @@
 import * as cheerio from 'cheerio';
 import { getText, BASE_URL } from './httpClient.js';
 
+export function cleanServerName(name) {
+  return name.replace(/\s*\([^)]*\)\s*$/, '').trim();
+}
+
+export function parseEpisodeDynamicHtml(html) {
+  const $ = cheerio.load(html);
+  const downloads = [];
+
+  $('#animeDownloadLink h6').each((_, el) => {
+    const heading = $(el).text().replace(/\s+/g, ' ').trim();
+    const sizeMatch = heading.match(/\s*[—-]\s*\(([\d.,]+\s*(?:GB|MB|KB))\)\s*$/i);
+    const quality = sizeMatch ? heading.slice(0, sizeMatch.index).trim() : heading;
+    const links = [];
+
+    $(el).nextUntil('h6').each((_, sibling) => {
+      const anchors = $(sibling).is('a') ? $(sibling) : $(sibling).find('a');
+      anchors.each((_, anchor) => {
+        const href = $(anchor).attr('href');
+        if (href) {
+          links.push({
+            name: $(anchor).text().replace(/\s+/g, ' ').trim(),
+            url: href,
+          });
+        }
+      });
+    });
+
+    if (quality && links.length) {
+      downloads.push({
+        quality,
+        size: sizeMatch?.[1] || null,
+        links,
+      });
+    }
+  });
+
+  const player = $('#player');
+  const streamUrl = player.attr('src')
+    || player.find('source').first().attr('src')
+    || player.attr('data-hls-src')
+    || null;
+
+  return { downloads, streamUrl };
+}
+
 /**
  * Kuramanime Scraper Service
  * Parsing HTML ke JSON untuk semua endpoint.
@@ -309,7 +354,7 @@ export async function scrapeEpisode(animeIdOrSlug, episodeNum) {
   $('#changeServer option').each((_, el) => {
     servers.push({
       id: $(el).attr('value') || '',
-      name: $(el).text().trim(),
+      name: cleanServerName($(el).text().trim()),
     });
   });
 
