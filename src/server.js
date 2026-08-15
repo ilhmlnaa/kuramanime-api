@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import app from './app.js';
 import { closeStreamBrowser } from './services/streamAuth.js';
+import { closeCacheStore } from './services/cacheStore.js';
 
 const PORT = process.env.PORT || 3000;
 
@@ -12,11 +13,13 @@ const server = app.listen(PORT, () => {
   }
 });
 
-// Graceful shutdown: tutup browser Playwright biar tidak nyangkut
 async function shutdown(signal) {
   console.log(`\n${signal} received — shutting down...`);
   server.close();
-  await closeStreamBrowser().catch(() => {});
+  await Promise.all([
+    closeStreamBrowser().catch(() => {}),
+    closeCacheStore().catch(() => {}),
+  ]);
   process.exit(0);
 }
 

@@ -11,41 +11,32 @@ import {
   quickListController,
   propertiesController,
 } from '../controllers/kuramanimeController.js';
+import { cache } from '../middleware/cache.js';
 
 const router = Router();
 
-// Home / Beranda
-router.get('/', homeController);
-router.get('/home', homeController);
+router.get('/', cache(120), homeController);
+router.get('/home', cache(120), homeController);
 
-// Daftar Anime + Search + Filter
-router.get('/anime', animeListController);
+router.get('/anime', cache(300), animeListController);
 
-// Quick Lists
-router.get('/quick/:type', quickListController);
+router.get('/quick/:type', cache(300), quickListController);
 
-// Properties
-router.get('/properties/:type', propertiesController);
+router.get('/properties/:type', cache(21600), propertiesController);
 
-// Jadwal
-router.get('/schedule', scheduleController);
-router.get('/schedule/:day', scheduleController);
+router.get('/schedule', cache(120), scheduleController);
+router.get('/schedule/:day', cache(120), scheduleController);
 
-// Search
-router.get('/search', searchController);
+router.get('/search', cache(300), searchController);
 
-// Detail Anime
-router.get('/anime/:id', animeDetailController);
-router.get('/anime/:id/:slug', animeDetailController);
+router.get('/anime/:id', cache(600), animeDetailController);
+router.get('/anime/:id/:slug', cache(600), animeDetailController);
 
-// Batch download (harus sebelum route episode agar tidak konflik)
-router.get('/anime/:id/batch/:range', batchController);
-router.get('/anime/:id/:slug/batch/:range', batchController);
+router.get('/anime/:id/batch/:range', cache(600), batchController);
+router.get('/anime/:id/:slug/batch/:range', cache(600), batchController);
 
-// Episode metadata
-router.get('/anime/:id/episode/:ep', episodeController);
+router.get('/anime/:id/episode/:ep', cache(120), episodeController);
 
-// Stream URL (butuh auth token)
-router.get('/anime/:id/episode/:ep/stream', streamController);
+router.get('/anime/:id/episode/:ep/stream', cache(60), streamController);
 
 export default router;
