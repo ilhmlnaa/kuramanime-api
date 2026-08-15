@@ -1,15 +1,15 @@
 import express from 'express';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
 import routes from './routes/index.js';
+import { openApiSpec } from './docs/openapi.js';
 
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Request logging
 app.use((req, _res, next) => {
   if (process.env.NODE_ENV !== 'test') {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
@@ -17,15 +17,20 @@ app.use((req, _res, next) => {
   next();
 });
 
-// API Routes
+app.get('/openapi.json', (_req, res) => res.json(openApiSpec));
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, {
+  explorer: true,
+  customSiteTitle: 'Kuramanime API Docs',
+}));
 app.use('/api', routes);
 
-// Root info
 app.get('/', (_req, res) => {
   res.json({
     name: 'Kuramanime API',
     version: '1.0.0',
     description: 'Unofficial Kuramanime anime scraping API',
+    documentation: '/docs',
+    openapi: '/openapi.json',
     endpoints: [
       'GET /api/home',
       'GET /api/anime',
@@ -44,12 +49,10 @@ app.get('/', (_req, res) => {
   });
 });
 
-// 404
 app.use((_req, res) => {
   res.status(404).json({ success: false, error: 'Endpoint tidak ditemukan' });
 });
 
-// Error handler
 app.use((err, _req, res, _next) => {
   console.error('[error]', err.message);
   res.status(500).json({
