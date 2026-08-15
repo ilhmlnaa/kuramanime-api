@@ -2,7 +2,7 @@
 
 Unofficial REST API untuk [Kuramanime](https://v19.kuramanime.ing/) — scraping anime subtitle Indonesia.
 
-**Stack:** Node.js + Express + Cheerio + Playwright (streaming only)
+**Stack:** Node.js + Express + Cheerio + Playwright + Redis opsional
 
 ---
 
@@ -24,6 +24,7 @@ npx playwright install --with-deps chromium
 | `PORT` | `3000` | Server port |
 | `KUMA_PROXY` | (kosong) | Proxy HTTP (contoh: `http://172.20.20.102:8888`) — wajib kalau kena Cloudflare 403 |
 | `KUMA_BASE_URL` | `https://v19.kuramanime.ing` | Base URL Kuramanime |
+| `REDIS_URL` | (kosong) | Redis connection URL. Jika kosong, API berjalan tanpa response cache |
 
 ## Run
 
@@ -36,6 +37,36 @@ KUMA_PROXY="http://proxy-kamu:8888" npm start
 ---
 
 ## Endpoints
+
+Dokumentasi interaktif tersedia di `GET /docs` dan spesifikasi OpenAPI mentah di `GET /openapi.json`.
+
+### Response Cache
+
+Cache Redis aktif otomatis jika `REDIS_URL` tersedia. API tetap berjalan normal ketika Redis tidak dikonfigurasi atau sedang bermasalah.
+
+| Endpoint | TTL |
+|---|---:|
+| Home dan schedule | 2 menit |
+| Anime list, search, quick lists | 5 menit |
+| Detail anime | 10 menit |
+| Episode | 2 menit |
+| Stream URL | 1 menit |
+| Batch download | 10 menit |
+| Properties | 6 jam |
+
+Kontrol cache per request:
+
+- `?noCache=true`: ambil langsung dari upstream tanpa membaca atau menulis cache.
+- `?refreshCache=true`: hapus cache lama, ambil data terbaru, lalu simpan ulang.
+- Header `Cache-Control: no-cache`: sama seperti `noCache=true`.
+- Header response `X-Cache`: `HIT`, `MISS`, `BYPASS`, atau `REFRESH`.
+
+Contoh:
+
+```text
+GET /api/home?noCache=true
+GET /api/anime/3791?refreshCache=true
+```
 
 ### Root
 ```
