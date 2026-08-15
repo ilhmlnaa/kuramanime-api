@@ -12,6 +12,7 @@ import {
   getEpisodeDynamicData,
   getBatchDownload,
 } from '../services/streamAuth.js';
+import { resolveCover } from '../services/imageResolver.js';
 
 export async function homeController(req, res, next) {
   try {
@@ -142,7 +143,8 @@ export async function batchController(req, res, next) {
   try {
     const { id, range } = req.params;
     const data = await getBatchDownload(id, range);
-    res.json({ success: true, data });
+    const img = await resolveCover({ id, url: `/anime/${id}` }).catch(() => '');
+    res.json({ success: true, data: { ...data, img } });
   } catch (err) {
     next(err);
   }

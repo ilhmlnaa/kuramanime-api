@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { getText, BASE_URL } from './httpClient.js';
+import { enrichWithCovers, extractCover } from './imageResolver.js';
 
 export function cleanServerName(name) {
   return name.replace(/\s*\([^)]*\)\s*$/, '').trim();
@@ -142,7 +143,7 @@ export async function scrapeAnimeList(params = {}) {
   const currentPage = parseInt($('.pagination .active').text().trim()) || page;
 
   return {
-    results,
+    results: await enrichWithCovers(results),
     pagination: { currentPage, totalPages: Math.max(totalPages, 1) },
     filters: { search, order_by, genre, season, type },
   };
@@ -417,6 +418,7 @@ export async function scrapeEpisode(animeIdOrSlug, episodeNum) {
     checkValue,
     csrfToken,
     navigation: { prev: prevEp, next: nextEp },
+    img: animeHtml ? extractCover(animeHtml) : '',
     url: episodeUrl,
   };
 }
@@ -494,7 +496,7 @@ export async function scrapeQuickList(type) {
     });
   });
 
-  return { type, results };
+  return { type, results: await enrichWithCovers(results) };
 }
 
 // ─── Helpers ────────────────────────────────────
