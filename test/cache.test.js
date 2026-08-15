@@ -94,3 +94,20 @@ test('cache failures fall through to the upstream handler', async () => {
   assert.deepEqual(res.body, { success: true });
   assert.equal(res.headers['X-Cache'], 'MISS');
 });
+
+test('hanging cache reads time out and fall through', async () => {
+  const store = {
+    async get() { return new Promise(() => {}); },
+    async set() {},
+    async delete() {},
+  };
+  const middleware = createCacheMiddleware({ store, ttl: 60 });
+  const req = { method: 'GET', path: '/api/home', query: {}, get: () => undefined };
+  const res = createResponse();
+  const startedAt = Date.now();
+
+  await middleware(req, res, () => res.json({ success: true }));
+
+  assert.deepEqual(res.body, { success: true });
+  assert.ok(Date.now() - startedAt < 1500);
+});

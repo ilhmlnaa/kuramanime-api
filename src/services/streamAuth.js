@@ -27,7 +27,14 @@ let context = null;
 let page = null;
 let lastEpisode = null;   // { id, num } yang sedang di-load
 let lastLoadedAt = 0;
-const NAV_TTL_MS = 5 * 60 * 1000; // 5 menit valid, lalu re-navigate
+const NAV_TTL_MS = 5 * 60 * 1000;
+let pageQueue = Promise.resolve();
+
+function withPageLock(task) {
+  const result = pageQueue.then(task, task);
+  pageQueue = result.catch(() => {});
+  return result;
+}
 
 /** Ambil browser instance (launch sekali, reuse terus) */
 async function getBrowser() {
@@ -89,7 +96,7 @@ async function evaluateSafe(expr) {
  * @param {string} server - server id (kuramadrive|mega|...)
  * @returns {Promise<object>} { videoUrl, iframeUrl, source, hasError, servers }
  */
-export async function getStreamSource(animeId, episodeNum, server) {
+async function getStreamSourceUnlocked(animeId, episodeNum, server) {
   await ensureLoaded(animeId, episodeNum);
 
   const result = await page.evaluate(
@@ -162,20 +169,26 @@ export async function getStreamSource(animeId, episodeNum, server) {
   };
 }
 
-export async function getEpisodeDynamicData(animeId, episodeNum) {
-  const stream = await getStreamSource(animeId, episodeNum, 'kuramadrive');
+export function getStreamSource(animeId, episodeNum, server) {
+  return withPageLock(() => getStreamSourceUnlocked(animeId, episodeNum, server));
+}
 
-  await page.waitForFunction(
-    () => document.querySelectorAll('#animeDownloadLink h6').length > 0,
-    { timeout: 30000 }
-  );
+export function getEpisodeDynamicData(animeId, episodeNum) {
+  return withPageLock(async () => {
+    const stream = await getStreamSourceUnlocked(animeId, episodeNum, 'kuramadrive');
 
-  const parsed = parseEpisodeDynamicHtml(await page.content());
+    await page.waitForFunction(
+      () => document.querySelectorAll('#animeDownloadLink h6').length > 0,
+      { timeout: 30000 }
+    );
 
-  return {
-    downloads: parsed.downloads,
-    streamUrl: stream.videoUrl || stream.iframeUrl || parsed.streamUrl || null,
-  };
+    const parsed = parseEpisodeDynamicHtml(await page.content());
+
+    return {
+      downloads: parsed.downloads,
+      streamUrl: stream.videoUrl || stream.iframeUrl || parsed.streamUrl || null,
+    };
+  });
 }
 
 /** Tutup browser (untuk shutdown bersih) */
@@ -205,7 +218,7 @@ let lastBatch = null;   // { url, loadedAt } halaman batch yang sedang di-load
  * @param {string} range - rentang episode batch, mis. "1-12"
  * @returns {Promise<object>} { title, range, downloads }
  */
-export async function getBatchDownload(animeIdOrSlug, range) {
+async function getBatchDownloadUnlocked(animeIdOrSlug, range) {
   await getBrowser();
 
   // Batch URL WAJIB pakai ID numerik — slug-only redirect ke /xxx/ yang rusak.
@@ -286,4 +299,8 @@ export async function getBatchDownload(animeIdOrSlug, range) {
     downloads: result.downloads || [],
     url,
   };
+}
+
+export function getBatchDownload(animeIdOrSlug, range) {
+  return withPageLock(() => getBatchDownloadUnlocked(animeIdOrSlug, range));
 }

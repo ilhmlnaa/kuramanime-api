@@ -12,6 +12,7 @@ import {
   propertiesController,
 } from '../controllers/kuramanimeController.js';
 import { cache } from '../middleware/cache.js';
+import { rateLimitCacheBypass } from '../middleware/cacheBypassRateLimit.js';
 
 const router = Router();
 
@@ -32,11 +33,11 @@ router.get('/search', cache(300), searchController);
 router.get('/anime/:id', cache(600), animeDetailController);
 router.get('/anime/:id/:slug', cache(600), animeDetailController);
 
-router.get('/anime/:id/batch/:range', cache(600), batchController);
-router.get('/anime/:id/:slug/batch/:range', cache(600), batchController);
+router.get('/anime/:id/batch/:range', rateLimitCacheBypass, cache(600), batchController);
+router.get('/anime/:id/:slug/batch/:range', rateLimitCacheBypass, cache(600), batchController);
 
-router.get('/anime/:id/episode/:ep', cache(120), episodeController);
+router.get('/anime/:id/episode/:ep', rateLimitCacheBypass, cache(120), episodeController);
 
-router.get('/anime/:id/episode/:ep/stream', cache(60), streamController);
+router.get('/anime/:id/episode/:ep/stream', rateLimitCacheBypass, cache(60), streamController);
 
 export default router;

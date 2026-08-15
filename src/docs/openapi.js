@@ -119,6 +119,16 @@ export const openApiSpec = {
         tags: ['Episode'],
       },
     },
+    '/api/anime/{id}/{slug}/batch/{range}': {
+      get: {
+        ...operation('Link download batch dengan ID dan slug', [
+          path('id', 'ID anime'),
+          path('slug', 'Slug anime'),
+          path('range', 'Rentang episode, misalnya 1-12'),
+        ]),
+        tags: ['Episode'],
+      },
+    },
     '/api/quick/{type}': {
       get: {
         ...operation('Daftar cepat anime', [
@@ -140,6 +150,9 @@ export const openApiSpec = {
     },
     '/api/schedule/{day}': {
       get: { ...operation('Jadwal berdasarkan hari', [path('day', 'Nama hari Indonesia atau Inggris')]), tags: ['Discovery'] },
+    },
+    '/api/schedule': {
+      get: { ...operation('Jadwal hari default'), tags: ['Discovery'] },
     },
   },
   components: {

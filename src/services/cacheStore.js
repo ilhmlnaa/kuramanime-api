@@ -11,8 +11,8 @@ async function getClient() {
     client = createClient({
       url,
       socket: {
-        connectTimeout: 5000,
-        reconnectStrategy: (retries) => Math.min(retries * 100, 3000),
+        connectTimeout: 1000,
+        reconnectStrategy: (retries) => retries >= 2 ? false : 200,
       },
     });
     client.on('error', (error) => {
@@ -24,10 +24,10 @@ async function getClient() {
     connecting ||= client.connect().finally(() => {
       connecting = undefined;
     });
-    await connecting;
+    await connecting.catch(() => null);
   }
 
-  return client;
+  return client.isReady ? client : null;
 }
 
 export const redisCacheStore = {
