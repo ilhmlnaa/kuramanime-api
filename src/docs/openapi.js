@@ -49,7 +49,7 @@ export const openApiSpec = {
   info: {
     title: 'Kuramanime API',
     version: '1.0.0',
-    description: 'Unofficial REST API untuk mengambil metadata anime, episode, stream, dan download dari Kuramanime.',
+    description: 'Unofficial REST API Kuramanime. Cover anime diperkaya dari halaman detail dan disimpan 6 jam di memory serta 7 hari di Redis bila REDIS_URL tersedia.',
   },
   servers: [{ url: '/', description: 'Current server' }],
   tags: [
@@ -138,8 +138,27 @@ export const openApiSpec = {
             required: true,
             schema: { type: 'string', enum: ['ongoing', 'finished', 'upcoming', 'movie', 'donghua'] },
           },
+          {
+            name: 'page',
+            in: 'query',
+            description: 'Halaman hasil. Default 1.',
+            schema: { type: 'integer', minimum: 1, default: 1 },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            description: 'Jumlah item per halaman. Default 20, maksimum 50.',
+            schema: { type: 'integer', minimum: 1, maximum: 50, default: 20 },
+          },
+          {
+            name: 'includeImages',
+            in: 'query',
+            description: 'Isi properti img dari cover detail. Gunakan false untuk response cold-cache yang lebih cepat.',
+            schema: { type: 'boolean', default: true },
+          },
         ]),
         tags: ['Discovery'],
+        description: 'Mengembalikan quick list dengan pagination API-side. Cover hanya diambil untuk item pada halaman yang diminta, bukan seluruh daftar.',
       },
     },
     '/api/properties/{type}': {

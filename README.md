@@ -54,6 +54,8 @@ Cache Redis aktif otomatis jika `REDIS_URL` tersedia. API tetap berjalan normal 
 | Batch download | 10 menit |
 | Properties | 6 jam |
 
+Cover anime memiliki cache terpisah: 6 jam di memory process dan 7 hari di Redis. Request cover untuk anime yang sama juga dideduplikasi agar request bersamaan tidak melakukan fetch detail berulang.
+
 Kontrol cache per request:
 
 - `?noCache=true`: ambil langsung dari upstream tanpa membaca atau menulis cache.
@@ -149,14 +151,57 @@ GET /api/anime/:id/:slug/batch/:range    → /api/anime/3791/watashi-ga-koibito.
 Sama seperti `/stream`, ini butuh Playwright (link dimuat dinamis via `jLoadSecure`). Slug-only pun aman — ID di-resolve otomatis.
 
 ### Quick Lists
+```text
+GET /api/quick/:type?page=1&limit=20&includeImages=true
 ```
-GET /api/quick/ongoing
-GET /api/quick/finished
-GET /api/quick/upcoming
-GET /api/quick/movie
-GET /api/quick/donghua
-→ { success, data: { type, results: [...] } }
+
+Nilai `type`: `ongoing`, `finished`, `upcoming`, `movie`, atau `donghua`.
+
+| Parameter | Default | Batas | Keterangan |
+|---|---:|---:|---|
+| `page` | `1` | minimum `1` | Halaman hasil |
+| `limit` | `20` | maksimum `50` | Jumlah anime per halaman |
+| `includeImages` | `true` | boolean | Isi properti `img`; gunakan `false` untuk response lebih cepat |
+
+Contoh:
+
+```text
+GET /api/quick/ongoing?page=1&limit=20
+GET /api/quick/movie?page=2&limit=10&includeImages=false
 ```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "type": "ongoing",
+    "includeImages": true,
+    "results": [
+      {
+        "id": "5067",
+        "slug": "kimi-wo-aisuru-ki-wa-nai...",
+        "title": "Kimi wo Aisuru Ki wa Nai...",
+        "episode": 6,
+        "totalEpisodes": 12,
+        "img": "https://.../cover.jpg",
+        "url": "https://v19.kuramanime.ing/anime/5067/..."
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalItems": 100,
+      "limit": 20,
+      "hasNextPage": true,
+      "hasPrevPage": false
+    }
+  }
+}
+```
+
+Quick list asli tidak menyediakan gambar. API mengambil cover hanya untuk item pada halaman yang diminta. Dengan default `limit=20`, cold request membutuhkan maksimal 20 fetch cover, bukan 100. Setelah cover tersimpan di Redis, instance API lain dapat menggunakan cache yang sama selama 7 hari.
 
 ### Properties
 ```

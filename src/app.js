@@ -31,21 +31,18 @@ app.get('/', (_req, res) => {
     description: 'Unofficial Kuramanime anime scraping API',
     documentation: '/docs',
     openapi: '/openapi.json',
-    endpoints: [
-      'GET /api/home',
-      'GET /api/anime',
-      'GET /api/anime?search=...&order_by=...&genre=...&season=...&type=...&page=...',
-      'GET /api/anime/:id',
-      'GET /api/anime/:id/:slug',
-      'GET /api/anime/:id/episode/:ep',
-      'GET /api/anime/:id/episode/:ep/stream?server=kuramadrive',
-      'GET /api/anime/:id/batch/:range',
-      'GET /api/anime/:id/:slug/batch/:range',
-      'GET /api/quick/:type',
-      'GET /api/properties/:type',
-      'GET /api/schedule/:day',
-      'GET /api/search?q=...',
-    ],
+    endpoints: {
+      home: 'GET /api/home',
+      animeList: 'GET /api/anime?search=&order_by=text&page=1',
+      search: 'GET /api/search?q=one+piece',
+      animeDetail: 'GET /api/anime/:id/:slug?',
+      episode: 'GET /api/anime/:id/episode/:ep',
+      stream: 'GET /api/anime/:id/episode/:ep/stream?server=kuramadrive',
+      batch: 'GET /api/anime/:id/:slug?/batch/:range',
+      quickList: 'GET /api/quick/:type?page=1&limit=20&includeImages=true',
+      properties: 'GET /api/properties/:type',
+      schedule: 'GET /api/schedule/:day?',
+    },
   });
 });
 
