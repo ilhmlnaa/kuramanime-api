@@ -86,6 +86,11 @@ export function extractEpisodeLinks(html) {
   }));
 }
 
+export function extractAnimeSlug(url) {
+  const match = String(url || '').match(/\/anime\/(?:\d+\/)?([^/?#]+)/);
+  return match?.[1] || '';
+}
+
 /**
  * Kuramanime Scraper Service
  * Parsing HTML ke JSON untuk semua endpoint.
@@ -443,6 +448,7 @@ export async function scrapeEpisode(animeIdOrSlug, episodeNum) {
 
   return {
     animeId,
+    slug: extractAnimeSlug(episodeUrl || url),
     episode: episodeNum,
     title: episodeTitle,
     animeTitle,

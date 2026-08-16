@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   buildEpisodeNavigation,
   cleanServerName,
+  extractAnimeSlug,
   extractEpisodeLinks,
   parseEpisodeDynamicHtml,
 } from '../src/services/scraper.js';
@@ -98,4 +99,15 @@ test('extractEpisodeLinks reads episode URLs from detail popover', () => {
     { episode: 1, url: 'https://example.com/anime/1/title/episode/1' },
     { episode: 2, url: 'https://example.com/anime/1/title/episode/2' },
   ]);
+});
+
+test('extractAnimeSlug reads slug from episode and detail URLs', () => {
+  assert.equal(
+    extractAnimeSlug('https://example.com/anime/3791/watashi-ga-koibito/episode/1'),
+    'watashi-ga-koibito'
+  );
+  assert.equal(
+    extractAnimeSlug('https://example.com/anime/3791/watashi-ga-koibito'),
+    'watashi-ga-koibito'
+  );
 });

@@ -98,6 +98,7 @@ export const openApiSpec = {
           path('ep', 'Nomor episode'),
         ]),
         tags: ['Episode'],
+        description: 'Response mencakup slug anime, cover, streamUrl Kuramadrive, navigation, dan seluruh daftar episodes.',
       },
     },
     '/api/anime/{id}/episode/{ep}/stream': {
