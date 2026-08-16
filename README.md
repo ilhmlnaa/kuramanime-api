@@ -109,6 +109,8 @@ GET /api/anime/:id/episode/:ep        → /api/anime/50/episode/989
 ```
 - `servers` — daftar server streaming (id + label)
 - `downloads` — daftar link download (kualitas + URL)
+- `navigation.prev` dan `navigation.next` — episode sebelum/sesudahnya dengan `id`, `episode`, dan `url`
+- `episodes` — seluruh daftar episode; setiap item berisi `id`, `episode`, `title`, `url`, dan `isCurrent`
 
 ### Stream URL ⚡
 ```

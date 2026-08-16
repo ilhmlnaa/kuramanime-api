@@ -48,6 +48,44 @@ export function parseEpisodeDynamicHtml(html) {
   return { downloads, streamUrl };
 }
 
+export function buildEpisodeNavigation(links, currentEpisode) {
+  const unique = new Map();
+  for (const link of links) {
+    if (!unique.has(link.episode)) unique.set(link.episode, link.url);
+  }
+
+  const episodes = [...unique.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([episode, url]) => ({
+      id: episode,
+      episode,
+      title: `Episode ${episode}`,
+      url,
+      isCurrent: episode === currentEpisode,
+    }));
+  const index = episodes.findIndex((item) => item.episode === currentEpisode);
+  const toNavigation = (item) => item
+    ? { id: item.id, episode: item.episode, url: item.url }
+    : null;
+
+  return {
+    episodes,
+    navigation: {
+      prev: index > 0 ? toNavigation(episodes[index - 1]) : null,
+      next: index >= 0 ? toNavigation(episodes[index + 1]) : null,
+    },
+  };
+}
+
+export function extractEpisodeLinks(html) {
+  const $ = cheerio.load(html || '');
+  const dataContent = $('#episodeLists').attr('data-content') || '';
+  return [...dataContent.matchAll(/href='([^']*\/episode\/(\d+))'/g)].map((match) => ({
+    episode: Number.parseInt(match[2], 10),
+    url: match[1],
+  }));
+}
+
 /**
  * Kuramanime Scraper Service
  * Parsing HTML ke JSON untuk semua endpoint.
@@ -254,11 +292,7 @@ export async function scrapeAnimeDetail(param) {
     const epMatches = [...dataContent.matchAll(/href='[^']*\/episode\/(\d+)'/g)];
     for (const m of epMatches) {
       const epNum = parseInt(m[1]);
-      episodes.push({
-        episode: epNum,
-        title: `Ep ${epNum}`,
-        url: animeIdStr ? `${BASE_URL}/anime/${animeIdStr}/episode/${epNum}` : '',
-      });
+      episodes.push({ episode: epNum, url: m[0].match(/href='([^']+)'/)?.[1] || '' });
     }
   }
 
@@ -398,8 +432,7 @@ export async function scrapeEpisode(animeIdOrSlug, episodeNum) {
   });
 
   // Episode navigation
-  const prevEp = $('.before__nav').attr('href') || null;
-  const nextEp = $('.after__nav.nav__disabled').length ? null : ($('.after__nav').attr('href') || null);
+  const episodeGuide = buildEpisodeNavigation(extractEpisodeLinks(animeHtml), episodeNum);
 
   // Credit team
   const credit = $('#episodeCredit').text().trim();
@@ -418,7 +451,8 @@ export async function scrapeEpisode(animeIdOrSlug, episodeNum) {
     downloads,
     checkValue,
     csrfToken,
-    navigation: { prev: prevEp, next: nextEp },
+    navigation: episodeGuide.navigation,
+    episodes: episodeGuide.episodes,
     img: animeHtml ? extractCover(animeHtml) : '',
     url: episodeUrl,
   };

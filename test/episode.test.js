@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanServerName, parseEpisodeDynamicHtml } from '../src/services/scraper.js';
+import {
+  buildEpisodeNavigation,
+  cleanServerName,
+  extractEpisodeLinks,
+  parseEpisodeDynamicHtml,
+} from '../src/services/scraper.js';
 
 test('cleanServerName removes parenthetical descriptions', () => {
   assert.equal(cleanServerName('Kuramadrive s1 (normal, iklan banner)'), 'Kuramadrive s1');
@@ -50,4 +55,47 @@ test('parseEpisodeDynamicHtml returns the active Kuramadrive video URL', () => {
     parseEpisodeDynamicHtml(html).streamUrl,
     'https://chisato.my.id/kdrive/video.mp4?token=abc'
   );
+});
+
+test('buildEpisodeNavigation deduplicates episodes and resolves adjacent entries', () => {
+  const links = [
+    { episode: 3, url: 'https://example.com/episode/3' },
+    { episode: 1, url: 'https://example.com/episode/1' },
+    { episode: 3, url: 'https://example.com/episode/3' },
+    { episode: 2, url: 'https://example.com/episode/2' },
+  ];
+
+  assert.deepEqual(buildEpisodeNavigation(links, 2), {
+    episodes: [
+      { id: 1, episode: 1, title: 'Episode 1', url: 'https://example.com/episode/1', isCurrent: false },
+      { id: 2, episode: 2, title: 'Episode 2', url: 'https://example.com/episode/2', isCurrent: true },
+      { id: 3, episode: 3, title: 'Episode 3', url: 'https://example.com/episode/3', isCurrent: false },
+    ],
+    navigation: {
+      prev: { id: 1, episode: 1, url: 'https://example.com/episode/1' },
+      next: { id: 3, episode: 3, url: 'https://example.com/episode/3' },
+    },
+  });
+});
+
+test('buildEpisodeNavigation returns null at episode boundaries', () => {
+  const links = [
+    { episode: 1, url: 'https://example.com/episode/1' },
+    { episode: 2, url: 'https://example.com/episode/2' },
+  ];
+
+  assert.equal(buildEpisodeNavigation(links, 1).navigation.prev, null);
+  assert.equal(buildEpisodeNavigation(links, 2).navigation.next, null);
+});
+
+test('extractEpisodeLinks reads episode URLs from detail popover', () => {
+  const html = `<button id="episodeLists" data-content="
+    <a href='https://example.com/anime/1/title/episode/1'>Ep 1</a>
+    <a href='https://example.com/anime/1/title/episode/2'>Ep 2</a>
+  "></button>`;
+
+  assert.deepEqual(extractEpisodeLinks(html), [
+    { episode: 1, url: 'https://example.com/anime/1/title/episode/1' },
+    { episode: 2, url: 'https://example.com/anime/1/title/episode/2' },
+  ]);
 });
