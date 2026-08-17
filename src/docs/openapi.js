@@ -169,7 +169,11 @@ export const openApiSpec = {
       },
     },
     '/api/schedule/{day}': {
-      get: { ...operation('Jadwal berdasarkan hari', [path('day', 'Nama hari Indonesia atau Inggris')]), tags: ['Discovery'] },
+      get: {
+        ...operation('Jadwal berdasarkan hari', [path('day', 'Nama hari Indonesia atau Inggris')]),
+        tags: ['Discovery'],
+        description: 'Setiap item jadwal mencakup ID dan slug anime, informasi episode, waktu tayang, cover, dan URL detail.',
+      },
     },
     '/api/schedule': {
       get: { ...operation('Jadwal hari default'), tags: ['Discovery'] },

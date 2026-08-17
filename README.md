@@ -227,6 +227,8 @@ GET /api/schedule/minggu
 → { success, data: { day, schedule: [...] } }
 ```
 
+Setiap item jadwal berisi `id`, `slug`, `title`, `episode`, `airDay`, `airTime`, `img`, dan `url`.
+
 ---
 
 ## Arsitektur

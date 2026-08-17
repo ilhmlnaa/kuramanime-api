@@ -101,7 +101,7 @@ test('extractEpisodeLinks reads episode URLs from detail popover', () => {
   ]);
 });
 
-test('extractAnimeSlug reads slug from episode and detail URLs', () => {
+test('extractAnimeSlug reads slug from episode, detail, and schedule URLs', () => {
   assert.equal(
     extractAnimeSlug('https://example.com/anime/3791/watashi-ga-koibito/episode/1'),
     'watashi-ga-koibito'
@@ -109,5 +109,9 @@ test('extractAnimeSlug reads slug from episode and detail URLs', () => {
   assert.equal(
     extractAnimeSlug('https://example.com/anime/3791/watashi-ga-koibito'),
     'watashi-ga-koibito'
+  );
+  assert.equal(
+    extractAnimeSlug('/anime/5069/azur-lane-bisoku-zenshin-ni'),
+    'azur-lane-bisoku-zenshin-ni'
   );
 });

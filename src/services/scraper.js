@@ -498,7 +498,8 @@ export async function scrapeSchedule(day) {
       airTime: airTime || null, 
       img, 
       url: link, 
-      id: extractId(link) 
+      id: extractId(link),
+      slug: extractAnimeSlug(link),
     });
   });
 
