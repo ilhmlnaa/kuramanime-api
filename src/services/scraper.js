@@ -264,13 +264,22 @@ export async function scrapeAnimeDetail(param, epPage = 1) {
   ) || 0;
 
   const pageLinks = extractEpisodeLinks(html);
-  const pageIds = new Set(pageLinks.map((ep) => ep.episode));
-  const merged = [...pageLinks];
+  const pageIds = new Set();
+  const merged = [];
+  for (const ep of pageLinks) {
+    if (!pageIds.has(ep.episode)) {
+      pageIds.add(ep.episode);
+      merged.push(ep);
+    }
+  }
 
   if (total > pageIds.size && pageLinks.length > 0) {
     const template = pageLinks[0].url.replace(/\/episode\/\d+$/, '/episode/');
     for (let ep = 1; ep <= total; ep++) {
-      if (!pageIds.has(ep)) merged.push({ episode: ep, url: template + ep });
+      if (!pageIds.has(ep)) {
+        pageIds.add(ep);
+        merged.push({ episode: ep, url: template + ep });
+      }
     }
   }
 
