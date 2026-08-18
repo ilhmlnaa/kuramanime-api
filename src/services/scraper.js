@@ -86,6 +86,13 @@ export function extractEpisodeLinks(html) {
   }));
 }
 
+export function extractEpisodePagination(html) {
+  const $ = cheerio.load(html || '');
+  const dataContent = $('#episodeLists').attr('data-content') || '';
+  const nextMatch = dataContent.match(/href=['"][^'"]*page=(\d+)['"][^>]*><i class=['"]fa fa-forward/);
+  return nextMatch ? Number.parseInt(nextMatch[1], 10) : null;
+}
+
 export function extractAnimeSlug(url) {
   const match = String(url || '').match(/\/anime\/(?:\d+\/)?([^/?#]+)/);
   return match?.[1] || '';
@@ -240,23 +247,34 @@ export async function scrapeAnimeDetail(param) {
   }
 
   if (slug) {
-    // Kita punya slug — langsung ke halaman detail
-    // gunakan ternary supaya tidak menghasilkan // ganda jika animeId null
-    url = `${BASE_URL}/anime/${animeId ? animeId + '/' : ''}${slug}`;
+    url = `${BASE_URL}/anime/${animeId ? animeId + '/' : ''}${slug}?page=${epPage}`;
   } else if (animeId) {
-    // Hanya ID — cari via anime list untuk dapat slug
-    url = `${BASE_URL}/anime?order_by=text&page=1`;
-    const searchHtml = await getText(url);
+    const searchHtml = await getText(`${BASE_URL}/anime?search=${animeId}&order_by=text&page=1`);
     const $s = cheerio.load(searchHtml);
-    const match = $s(`.anime__list__link[href*="/anime/${animeId}/"]`).first().attr('href');
-    if (!match) throw new Error(`Anime dengan ID ${animeId} tidak ditemukan`);
-    url = `${BASE_URL}${match}`;
+    let match = $s(`.anime__list__link[href*="/anime/${animeId}/"]`).first().attr('href');
+    if (!match) {
+      match = $s(`.anime__list__link`).first().attr('href');
+      if (!match) throw new Error(`Anime dengan ID ${animeId} tidak dapat diresolve slug-nya.`);
+    }
+    url = `${BASE_URL}${match}?page=${epPage}`;
   } else {
     throw new Error(`Parameter tidak valid: ${param}`);
   }
 
   const html = await getText(url);
   const $ = cheerio.load(html);
+
+  const episodes = extractEpisodeLinks(html);
+  let nextEpPage = extractEpisodePagination(html);
+
+  if (nextEpPage === epPage + 1) {
+    try {
+      const nextUrl = url.replace(/\?page=\d+/, '') + `?page=${nextEpPage}`;
+      const nextHtml = await getText(nextUrl);
+      episodes.push(...extractEpisodeLinks(nextHtml));
+      nextEpPage = extractEpisodePagination(nextHtml);
+    } catch {}
+  }
 
   // Basic info
   const title = $('.anime__details__title h3').text().trim();
@@ -285,21 +303,6 @@ export async function scrapeAnimeDetail(param) {
   $('.anime__details__widget ul li a[href*="genre"]').each((_, el) => {
     genres.push({ name: $(el).text().trim(), url: $(el).attr('href') || '' });
   });
-
-  // Episode list — dari data-content attribute di #episodeLists popover
-  // Fallback id dari input#animeId (ada di halaman detail walaupun URL tidak mengandung id)
-  const animeIdStr = extractId(url) || $('input#animeId').val() || '';
-  const episodes = [];
-  const episodeLists = $('#episodeLists');
-  if (episodeLists.length) {
-    const dataContent = episodeLists.attr('data-content') || '';
-    // Format di popover: href='https://v19.kuramanime.ing/anime/50/slug/episode/989'
-    const epMatches = [...dataContent.matchAll(/href='[^']*\/episode\/(\d+)'/g)];
-    for (const m of epMatches) {
-      const epNum = parseInt(m[1]);
-      episodes.push({ episode: epNum, url: m[0].match(/href='([^']+)'/)?.[1] || '' });
-    }
-  }
 
   // Cover image
   const cover = $('.anime__details__pic').attr('data-setbg')
@@ -343,6 +346,10 @@ export async function scrapeAnimeDetail(param) {
     genres,
     info,
     episodes,
+    episodePagination: {
+      hasNext: nextEpPage !== null,
+      nextPage: nextEpPage,
+    },
     batch,
     url,
   };

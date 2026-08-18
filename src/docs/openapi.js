@@ -83,12 +83,24 @@ export const openApiSpec = {
       },
     },
     '/api/anime/{id}': {
-      get: { ...operation('Detail anime', [path('id', 'ID numerik atau slug anime')]), tags: ['Anime'] },
+      get: {
+        ...operation('Detail anime', [
+          path('id', 'ID numerik atau slug anime'),
+          { name: 'ep_page', in: 'query', description: 'Halaman pagination daftar episode. Default 1.', schema: { type: 'integer', minimum: 1, default: 1 } }
+        ]),
+        tags: ['Anime'],
+        description: 'Daftar episode digabungkan secara hybrid. API akan mengambil ep_page dan ep_page + 1. Jika masih ada sisa, flag episodePagination.hasNext akan bernilai true.',
+      },
     },
     '/api/anime/{id}/{slug}': {
       get: {
-        ...operation('Detail anime dengan ID dan slug', [path('id', 'ID anime'), path('slug', 'Slug anime')]),
+        ...operation('Detail anime dengan ID dan slug', [
+          path('id', 'ID anime'),
+          path('slug', 'Slug anime'),
+          { name: 'ep_page', in: 'query', description: 'Halaman pagination daftar episode. Default 1.', schema: { type: 'integer', minimum: 1, default: 1 } }
+        ]),
         tags: ['Anime'],
+        description: 'Daftar episode digabungkan secara hybrid. API akan mengambil ep_page dan ep_page + 1. Jika masih ada sisa, flag episodePagination.hasNext akan bernilai true.',
       },
     },
     '/api/anime/{id}/episode/{ep}': {

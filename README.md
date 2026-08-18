@@ -102,6 +102,19 @@ GET /api/anime/:id/:slug              → /api/anime/50/one-piece-OreGjicNb0Fh
 → { success, data: { title, synopsis, genre, episodes: [...], ... } }
 ```
 
+### Hybrid Episode Pagination
+
+Kuramanime membatasi 13 episode per halaman. Untuk mengurangi jumlah request saat client membaca anime panjang, API menggunakan metode **hybrid pagination**:
+
+1. Setiap request detail akan otomatis mengambil dan menggabungkan **2 halaman episode sekaligus** (sekitar 26 episode).
+2. Jika total episode melebihi 2 halaman, property `episodePagination.hasNext` akan bernilai `true` dan client dapat mengambil kelanjutannya menggunakan parameter `?ep_page=3`.
+
+Contoh request lanjutan:
+
+```text
+GET /api/anime/50/one-piece?ep_page=3
+```
+
 ### Episode Metadata
 ```
 GET /api/anime/:id/episode/:ep        → /api/anime/50/episode/989

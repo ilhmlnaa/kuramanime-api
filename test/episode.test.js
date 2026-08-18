@@ -5,6 +5,7 @@ import {
   cleanServerName,
   extractAnimeSlug,
   extractEpisodeLinks,
+  extractEpisodePagination,
   parseEpisodeDynamicHtml,
 } from '../src/services/scraper.js';
 
@@ -99,6 +100,15 @@ test('extractEpisodeLinks reads episode URLs from detail popover', () => {
     { episode: 1, url: 'https://example.com/anime/1/title/episode/1' },
     { episode: 2, url: 'https://example.com/anime/1/title/episode/2' },
   ]);
+});
+
+test('extractEpisodePagination reads the next page number from detail popover', () => {
+  const html = `<button id="episodeLists" data-content="
+    <a href='/anime/1/title?page=3' class='btn'><i class='fa fa-forward'></i></a>
+  "></button>`;
+
+  assert.equal(extractEpisodePagination(html), 3);
+  assert.equal(extractEpisodePagination('<button id="episodeLists"></button>'), null);
 });
 
 test('extractAnimeSlug reads slug from episode, detail, and schedule URLs', () => {

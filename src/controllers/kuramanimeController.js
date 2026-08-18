@@ -78,8 +78,9 @@ export async function propertiesController(req, res, next) {
 export async function animeDetailController(req, res, next) {
   try {
     const { id, slug } = req.params;
+    const epPage = Number.parseInt(req.query.ep_page, 10) || 1;
     const param = slug ? `${id}/${slug}` : id;
-    const data = await scrapeAnimeDetail(param);
+    const data = await scrapeAnimeDetail(param, epPage);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
