@@ -6,21 +6,22 @@ import {
   resolveCover,
 } from '../src/services/imageResolver.js';
 
-test('extractCover reads data-setbg before og:image', () => {
+test('extractCover reads data-setbg before og:image and extracts rating', () => {
   const html = `
     <meta property="og:image" content="https://example.com/og.jpg">
-    <div class="anime__details__pic" data-setbg="https://example.com/cover.jpg"></div>`;
+    <div class="anime__details__pic" data-setbg="https://example.com/cover.jpg"></div>
+    <div class="anime__details__rating"><span>8.67</span></div>`;
 
-  assert.equal(extractCover(html), 'https://example.com/cover.jpg');
+  assert.deepEqual(extractCover(html), { cover: 'https://example.com/cover.jpg', rating: '8.67' });
 });
 
-test('extractCover falls back to og:image', () => {
+test('extractCover falls back to og:image and handles missing rating', () => {
   const html = '<meta property="og:image" content="https://example.com/og.jpg">';
 
-  assert.equal(extractCover(html), 'https://example.com/og.jpg');
+  assert.deepEqual(extractCover(html), { cover: 'https://example.com/og.jpg', rating: null });
 });
 
-test('enrichWithCovers adds images with bounded concurrency', async () => {
+test('enrichWithCovers adds images and ratings with bounded concurrency', async () => {
   const items = [
     { id: '1', url: '/anime/1/first' },
     { id: '2', url: '/anime/2/second' },
@@ -36,7 +37,7 @@ test('enrichWithCovers adds images with bounded concurrency', async () => {
       maxActive = Math.max(maxActive, active);
       await new Promise((resolve) => setTimeout(resolve, 10));
       active -= 1;
-      return `https://example.com/${item.id}.jpg`;
+      return { cover: `https://example.com/${item.id}.jpg`, rating: `8.${item.id}` };
     },
   });
 
@@ -45,6 +46,7 @@ test('enrichWithCovers adds images with bounded concurrency', async () => {
     'https://example.com/2.jpg',
     'https://example.com/3.jpg',
   ]);
+  assert.deepEqual(enriched.map((item) => item.rating), ['8.1', '8.2', '8.3']);
   assert.equal(maxActive, 2);
 });
 
@@ -72,6 +74,6 @@ test('resolveCover deduplicates concurrent detail requests', async () => {
     resolveCover(item, { fetchText }),
   ]);
 
-  assert.deepEqual(results, Array(3).fill('https://example.com/dedupe.jpg'));
+  assert.deepEqual(results, Array(3).fill({ cover: 'https://example.com/dedupe.jpg', rating: null }));
   assert.equal(calls, 1);
 });

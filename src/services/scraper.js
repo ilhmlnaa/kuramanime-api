@@ -459,7 +459,7 @@ export async function scrapeEpisode(animeIdOrSlug, episodeNum) {
     csrfToken,
     navigation: episodeGuide.navigation,
     episodes: episodeGuide.episodes,
-    img: animeHtml ? extractCover(animeHtml) : '',
+    img: animeHtml ? extractCover(animeHtml).cover : '',
     url: episodeUrl,
   };
 }

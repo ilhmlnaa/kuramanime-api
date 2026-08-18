@@ -9,23 +9,27 @@ const pendingCovers = new Map();
 
 export function extractCover(html) {
   const $ = cheerio.load(html);
-  return $('.anime__details__pic').attr('data-setbg')
+  const cover = $('.anime__details__pic').attr('data-setbg')
     || $('.anime__details__pic img').attr('src')
     || $('meta[property="og:image"]').attr('content')
     || '';
+  const ratingMatch = $('.anime__details__rating span, .fa-star').parent().text().trim().match(/[\d.]+/);
+  const rating = ratingMatch ? ratingMatch[0] : null;
+  return { cover, rating };
 }
 
 export async function resolveCover(item, options = {}) {
   const key = item.id || item.url;
   const fetchText = options.fetchText || getText;
   const cached = coverCache.get(key);
-  if (cached && Date.now() - cached.createdAt < COVER_TTL_MS) return cached.url;
+  if (cached && Date.now() - cached.createdAt < COVER_TTL_MS) return cached.data;
 
   if (process.env.REDIS_URL) {
-    const redisCover = await redisCacheStore.get(`kuramanime:v1:cover:${key}`).catch(() => null);
-    if (redisCover) {
-      coverCache.set(key, { url: redisCover, createdAt: Date.now() });
-      return redisCover;
+    const cachedJson = await redisCacheStore.get(`kuramanime:v1:meta:${key}`).catch(() => null);
+    if (cachedJson) {
+      const data = JSON.parse(cachedJson);
+      coverCache.set(key, { data, createdAt: Date.now() });
+      return data;
     }
   }
 
@@ -33,14 +37,14 @@ export async function resolveCover(item, options = {}) {
 
   const pending = (async () => {
     const url = item.url?.startsWith('http') ? item.url : `${BASE_URL}${item.url || ''}`;
-    if (!url) return '';
+    if (!url) return { cover: '', rating: null };
 
-    const cover = extractCover(await fetchText(url));
-    coverCache.set(key, { url: cover, createdAt: Date.now() });
-    if (cover && process.env.REDIS_URL) {
-      await redisCacheStore.set(`kuramanime:v1:cover:${key}`, cover, REDIS_COVER_TTL_SECONDS).catch(() => {});
+    const data = extractCover(await fetchText(url));
+    coverCache.set(key, { data, createdAt: Date.now() });
+    if (process.env.REDIS_URL) {
+      await redisCacheStore.set(`kuramanime:v1:meta:${key}`, JSON.stringify(data), REDIS_COVER_TTL_SECONDS).catch(() => {});
     }
-    return cover;
+    return data;
   })().finally(() => pendingCovers.delete(key));
 
   pendingCovers.set(key, pending);
@@ -61,9 +65,12 @@ export async function enrichWithCovers(items, options = {}) {
 
       if (!img) {
         try {
-          img = await resolve(item);
+          const { cover, rating } = await resolve(item);
+          img = cover;
+          item.rating = rating;
         } catch {
           img = '';
+          item.rating = null;
         }
       }
 

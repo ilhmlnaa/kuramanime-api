@@ -144,7 +144,7 @@ export async function batchController(req, res, next) {
   try {
     const { id, range } = req.params;
     const data = await getBatchDownload(id, range);
-    const img = await resolveCover({ id, url: `/anime/${id}` }).catch(() => '');
+    const img = await resolveCover({ id, url: `/anime/${id}` }).then((d) => d.cover).catch(() => '');
     res.json({ success: true, data: { ...data, img } });
   } catch (err) {
     next(err);
