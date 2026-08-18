@@ -4,7 +4,7 @@ import { enrichWithCovers, extractCover } from './imageResolver.js';
 import { paginateQuickList } from './quickList.js';
 
 export function cleanServerName(name) {
-  return name.replace(/\s*\([^)]*\)\s*$/, '').trim();
+  return name.replace(/\s*[\u2014\u2013-]\s*\S.*$/, '').replace(/\s*\([^)]*\)\s*$/, '').trim();
 }
 
 export function parseEpisodeDynamicHtml(html) {
