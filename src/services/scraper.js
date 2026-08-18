@@ -80,10 +80,13 @@ export function buildEpisodeNavigation(links, currentEpisode) {
 export function extractEpisodeLinks(html) {
   const $ = cheerio.load(html || '');
   const dataContent = $('#episodeLists').attr('data-content') || '';
-  return [...dataContent.matchAll(/href='([^']*\/episode\/(\d+))'/g)].map((match) => ({
-    episode: Number.parseInt(match[2], 10),
-    url: match[1],
-  }));
+  const links = [];
+  for (const m of dataContent.matchAll(/href='([^']*\/episode\/(\d+))'/g)) {
+    const before = dataContent.slice(Math.max(0, m.index - 80), m.index);
+    if (/\(Terlama\)|\(Terbaru\)/.test(before)) continue;
+    links.push({ episode: Number.parseInt(m[2], 10), url: m[1] });
+  }
+  return links;
 }
 
 export function extractEpisodePagination(html) {
@@ -232,9 +235,7 @@ export async function scrapeProperties(type) {
 
 // ─── Detail Anime ───────────────────────────────────
 
-export async function scrapeAnimeDetail(param) {
-  // param can be: "50" (id saja), "50/slug" (id+slug), atau "slug-only"
-  // Parse: jika ada "/", split jadi id + slug
+export async function scrapeAnimeDetail(param, epPage = 1) {
   let animeId, slug, url;
   if (param.includes('/')) {
     [animeId, slug] = param.split('/');
@@ -249,14 +250,7 @@ export async function scrapeAnimeDetail(param) {
   if (slug) {
     url = `${BASE_URL}/anime/${animeId ? animeId + '/' : ''}${slug}?page=${epPage}`;
   } else if (animeId) {
-    const searchHtml = await getText(`${BASE_URL}/anime?search=${animeId}&order_by=text&page=1`);
-    const $s = cheerio.load(searchHtml);
-    let match = $s(`.anime__list__link[href*="/anime/${animeId}/"]`).first().attr('href');
-    if (!match) {
-      match = $s(`.anime__list__link`).first().attr('href');
-      if (!match) throw new Error(`Anime dengan ID ${animeId} tidak dapat diresolve slug-nya.`);
-    }
-    url = `${BASE_URL}${match}?page=${epPage}`;
+    url = `${BASE_URL}/anime/${animeId}?page=${epPage}`;
   } else {
     throw new Error(`Parameter tidak valid: ${param}`);
   }
@@ -264,16 +258,20 @@ export async function scrapeAnimeDetail(param) {
   const html = await getText(url);
   const $ = cheerio.load(html);
 
-  const episodes = extractEpisodeLinks(html);
-  let nextEpPage = extractEpisodePagination(html);
+  const total = Number.parseInt(
+    $('.anime__details__widget ul li:contains("Episode")').text().split(':')[1],
+    10
+  ) || 0;
 
-  if (nextEpPage === epPage + 1) {
-    try {
-      const nextUrl = url.replace(/\?page=\d+/, '') + `?page=${nextEpPage}`;
-      const nextHtml = await getText(nextUrl);
-      episodes.push(...extractEpisodeLinks(nextHtml));
-      nextEpPage = extractEpisodePagination(nextHtml);
-    } catch {}
+  const pageLinks = extractEpisodeLinks(html);
+  const pageIds = new Set(pageLinks.map((ep) => ep.episode));
+  const merged = [...pageLinks];
+
+  if (total > pageIds.size && pageLinks.length > 0) {
+    const template = pageLinks[0].url.replace(/\/episode\/\d+$/, '/episode/');
+    for (let ep = 1; ep <= total; ep++) {
+      if (!pageIds.has(ep)) merged.push({ episode: ep, url: template + ep });
+    }
   }
 
   // Basic info
@@ -345,11 +343,7 @@ export async function scrapeAnimeDetail(param) {
     synopsis,
     genres,
     info,
-    episodes,
-    episodePagination: {
-      hasNext: nextEpPage !== null,
-      nextPage: nextEpPage,
-    },
+    episodes: merged.sort((a, b) => a.episode - b.episode),
     batch,
     url,
   };
