@@ -101,6 +101,13 @@ export function extractAnimeSlug(url) {
   return match?.[1] || '';
 }
 
+export function extractFinalEpisode(html) {
+  const $ = cheerio.load(html || '');
+  const dataContent = $('#episodeLists').attr('data-content') || '';
+  const match = dataContent.match(/Ep (\d+) \(Terbaru\)/);
+  return match ? Number.parseInt(match[1], 10) : 0;
+}
+
 /**
  * Kuramanime Scraper Service
  * Parsing HTML ke JSON untuk semua endpoint.
@@ -258,26 +265,22 @@ export async function scrapeAnimeDetail(param, epPage = 1) {
   const html = await getText(url);
   const $ = cheerio.load(html);
 
-  const total = Number.parseInt(
-    $('.anime__details__widget ul li:contains("Episode")').text().split(':')[1],
-    10
-  ) || 0;
-
-  const pageLinks = extractEpisodeLinks(html);
-  const pageIds = new Set();
+  const episodes = extractEpisodeLinks(html);
   const merged = [];
-  for (const ep of pageLinks) {
-    if (!pageIds.has(ep.episode)) {
-      pageIds.add(ep.episode);
+  const seenNumbers = new Set();
+  for (const ep of episodes) {
+    if (!seenNumbers.has(ep.episode)) {
+      seenNumbers.add(ep.episode);
       merged.push(ep);
     }
   }
 
-  if (total > pageIds.size && pageLinks.length > 0) {
-    const template = pageLinks[0].url.replace(/\/episode\/\d+$/, '/episode/');
-    for (let ep = 1; ep <= total; ep++) {
-      if (!pageIds.has(ep)) {
-        pageIds.add(ep);
+  const finalEpisode = extractFinalEpisode(html);
+  if (finalEpisode > seenNumbers.size && episodes.length > 0) {
+    const template = episodes[0].url.replace(/\/episode\/\d+$/, '/episode/');
+    for (let ep = 1; ep <= finalEpisode; ep++) {
+      if (!seenNumbers.has(ep)) {
+        seenNumbers.add(ep);
         merged.push({ episode: ep, url: template + ep });
       }
     }

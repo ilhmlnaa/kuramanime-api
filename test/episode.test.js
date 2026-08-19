@@ -6,6 +6,7 @@ import {
   extractAnimeSlug,
   extractEpisodeLinks,
   extractEpisodePagination,
+  extractFinalEpisode,
   parseEpisodeDynamicHtml,
 } from '../src/services/scraper.js';
 
